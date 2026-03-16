@@ -11,9 +11,18 @@ import bodyParser from "body-parser";
 
 dotenv.config();
 
-const firebaseConfig = JSON.parse(
-  readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8")
-);
+let firebaseConfig: any = null;
+try {
+  firebaseConfig = JSON.parse(
+    readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8")
+  );
+} catch (error) {
+  console.warn("firebase-applet-config.json not found. Falling back to environment variables.");
+  firebaseConfig = {
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    firestoreDatabaseId: process.env.VITE_FIRESTORE_DATABASE_ID
+  };
+}
 
 let genAI: GoogleGenAI | null = null;
 
@@ -31,16 +40,18 @@ function getGenAI() {
 async function startServer() {
   // Initialize Firebase Admin
   if (!admin.apps.length) {
-    admin.initializeApp({
-      projectId: firebaseConfig.projectId,
-    });
+    admin.initializeApp(
+      firebaseConfig.projectId ? { projectId: firebaseConfig.projectId } : undefined
+    );
   }
 
   const db = admin.firestore();
-  // @ts-ignore
-  db.settings({ databaseId: firebaseConfig.firestoreDatabaseId });
+  if (firebaseConfig.firestoreDatabaseId) {
+    // @ts-ignore
+    db.settings({ databaseId: firebaseConfig.firestoreDatabaseId });
+  }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_to_prevent_crash");
 
   const app = express();
   const PORT = 3000;
