@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Users can only create their own profile with 'free' plan initially
+      // Updates to 'plan' are NOT allowed via client SDK
+      allow create: if isOwner(userId) && 
+                      request.resource.data.plan == 'free' &&
+                      request.resource.data.uid == userId;
+      
+      allow update: if isOwner(userId) && 
+                      request.resource.data.plan == resource.data.plan &&
+                      request.resource.data.uid == resource.data.uid;
+                      
+      // Usage tracking
+      match /usage/{date} {
+        allow read: if isOwner(userId);
+        // Usage is updated by the backend, but we allow read for the UI
+      }
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

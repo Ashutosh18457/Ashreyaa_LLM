@@ -9,7 +9,9 @@ import {
   Settings,
   Plus,
   MessageSquare,
-  Cpu
+  Cpu,
+  Globe,
+  CreditCard
 } from 'lucide-react';
 import { AssistantCategory } from '../types';
 import { cn } from '../utils';
@@ -18,15 +20,25 @@ interface SidebarProps {
   activeCategory: AssistantCategory;
   onCategoryChange: (category: AssistantCategory) => void;
   onNewChat: () => void;
+  onOpenSettings: () => void;
+  onOpenHistory: () => void;
+  onOpenPayment: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeCategory, onCategoryChange, onNewChat }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  activeCategory, 
+  onCategoryChange, 
+  onNewChat,
+  onOpenSettings,
+  onOpenHistory,
+  onOpenPayment
+}) => {
   const categories: { id: AssistantCategory; label: string; icon: React.ReactNode; description: string }[] = [
     { id: 'general', label: 'General', icon: <LayoutDashboard size={18} />, description: 'Versatile AI assistant' },
     { id: 'ml-engineer', label: 'ML Engineer', icon: <Cpu size={18} />, description: 'Train & optimize models' },
     { id: 'coding', label: 'Coding', icon: <Code size={18} />, description: 'Technical & programming' },
     { id: 'research', label: 'Research', icon: <Search size={18} />, description: 'Deep analysis & search' },
-    { id: 'satellite', label: 'Satellite', icon: <Search size={18} />, description: 'Orbital intelligence' },
+    { id: 'satellite', label: 'Satellite', icon: <Globe size={18} />, description: 'Orbital intelligence' },
   ];
 
   return (
@@ -79,11 +91,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeCategory, onCategoryChan
       </div>
 
       <div className="p-4 border-t border-white/5 space-y-1">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-zinc-200 transition-all group">
+        <button 
+          onClick={onOpenPayment}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-teal-500/10 hover:text-teal-400 transition-all group border border-transparent hover:border-teal-500/20"
+        >
+          <CreditCard size={18} className="text-zinc-500 group-hover:text-teal-400 transition-colors" />
+          <span className="text-sm font-semibold">Billing</span>
+        </button>
+        <button 
+          onClick={onOpenHistory}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-zinc-200 transition-all group"
+        >
           <MessageSquare size={18} className="text-zinc-500 group-hover:text-teal-400 transition-colors" />
           <span className="text-sm font-semibold">History</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-zinc-200 transition-all group">
+        <button 
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-zinc-200 transition-all group"
+        >
           <Settings size={18} className="text-zinc-500 group-hover:text-teal-400 transition-colors" />
           <span className="text-sm font-semibold">Settings</span>
         </button>

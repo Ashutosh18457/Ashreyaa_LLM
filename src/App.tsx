@@ -2,17 +2,70 @@ import { useState, useRef, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInput } from './components/ChatInput';
 import { MessageItem } from './components/MessageItem';
+import { SettingsModal } from './components/SettingsModal';
+import { HistoryModal } from './components/HistoryModal';
+import { PaymentModal } from './components/PaymentModal';
 import { Message, Attachment, AssistantCategory } from './types';
 import { geminiService } from './services/geminiService';
-import { Bot, Sparkles } from 'lucide-react';
+import { ASSISTANT_CONFIGS } from './constants';
+import { Bot, Sparkles, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './utils';
+import { auth, signInWithGoogle, db } from './firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [userPlan, setUserPlan] = useState<'free' | 'premium'>('free');
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeCategory, setActiveCategory] = useState<AssistantCategory>('general');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        // Listen to user plan changes
+        const userRef = doc(db, 'users', currentUser.uid);
+        onSnapshot(userRef, (doc) => {
+          if (doc.exists()) {
+            setUserPlan(doc.data().plan);
+          }
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Load history from localStorage on mount
+    const savedMessages = localStorage.getItem('ashreya_chat_history');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        // Convert ISO strings back to Date objects
+        const hydrated = parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        setMessages(hydrated);
+      } catch (e) {
+        console.error('Failed to load history', e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save history to localStorage whenever messages change
+    if (messages.length > 0) {
+      localStorage.setItem('ashreya_chat_history', JSON.stringify(messages));
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -21,6 +74,11 @@ export default function App() {
   }, [messages]);
 
   const handleSend = async (content: string, attachments: Attachment[]) => {
+    if (!user) {
+      alert("Please sign in to chat.");
+      return;
+    }
+
     const userMessage: Message = {
       id: Math.random().toString(36).substring(7),
       role: 'user',
@@ -37,42 +95,26 @@ export default function App() {
     const assistantMessage: Message = {
       id: assistantMessageId,
       role: 'assistant',
-      content: '',
+      content: 'Thinking...',
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      let fullContent = '';
-      let groundingMetadata = undefined;
-
-      const stream = geminiService.chatStream(newMessages, activeCategory);
+      const responseText = await geminiService.chat(newMessages, user.uid, activeCategory);
       
-      for await (const chunk of stream) {
-        if (chunk.text) {
-          fullContent += chunk.text;
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, content: fullContent } 
-              : msg
-          ));
-        }
-        
-        if (chunk.candidates?.[0]?.groundingMetadata) {
-          groundingMetadata = chunk.candidates[0].groundingMetadata;
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, groundingMetadata } 
-              : msg
-          ));
-        }
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessageId 
-          ? { ...msg, content: 'I encountered an error. Please try again.' } 
+          ? { ...msg, content: responseText } 
+          : msg
+      ));
+    } catch (error: any) {
+      console.error('Chat error:', error);
+      const errorMessage = error?.message || 'I encountered an error. Please try again.';
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: errorMessage } 
           : msg
       ));
     } finally {
@@ -82,7 +124,10 @@ export default function App() {
 
   const handleNewChat = () => {
     setMessages([]);
+    localStorage.removeItem('ashreya_chat_history');
   };
+
+  const isApiKeyMissing = !process.env.GEMINI_API_KEY;
 
   return (
     <div className="flex h-screen bg-black text-zinc-100 selection:bg-teal-500/30">
@@ -90,12 +135,54 @@ export default function App() {
         activeCategory={activeCategory} 
         onCategoryChange={setActiveCategory}
         onNewChat={handleNewChat}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenPayment={() => setIsPaymentOpen(true)}
       />
       
       <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
         {/* Background Gradient Orbs */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
+
+        {/* Auth / Plan Banner */}
+        {!user ? (
+          <div className="bg-teal-500/10 border-b border-teal-500/20 px-8 py-3 flex items-center justify-between z-30">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+              <p className="text-xs font-bold text-teal-500 uppercase tracking-widest">
+                Sign in to access Ashreya Intelligence
+              </p>
+            </div>
+            <button 
+              onClick={() => signInWithGoogle()}
+              className="px-4 py-1.5 bg-teal-500 text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-400 transition-colors flex items-center gap-2"
+            >
+              <LogIn size={14} />
+              Sign In
+            </button>
+          </div>
+        ) : (
+          <div className="bg-zinc-900/80 border-b border-white/5 px-8 py-2 flex items-center justify-between z-30">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Current Plan:</span>
+              <span className={cn(
+                "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest",
+                userPlan === 'premium' ? "bg-teal-500 text-black" : "bg-zinc-800 text-zinc-400"
+              )}>
+                {userPlan}
+              </span>
+            </div>
+            {userPlan === 'free' && (
+              <button 
+                onClick={() => setIsPaymentOpen(true)}
+                className="text-[10px] font-bold text-teal-500 hover:text-teal-400 transition-colors uppercase tracking-widest underline underline-offset-4"
+              >
+                Upgrade to Premium
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Header */}
         <header className="h-20 border-b border-white/5 bg-black/40 backdrop-blur-2xl flex items-center justify-between px-8 sticky top-0 z-20">
@@ -108,7 +195,9 @@ export default function App() {
                 {activeCategory.replace('-', ' ')}
                 <span className="px-1.5 py-0.5 bg-zinc-800 text-[10px] rounded text-zinc-500 uppercase font-bold tracking-widest">Active</span>
               </h1>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.15em]">Neural Engine v3.1 Flash</p>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.15em]">
+                Neural Engine {ASSISTANT_CONFIGS[activeCategory].model.includes('pro') ? 'v3.1 Pro' : 'v3.1 Flash'}
+              </p>
             </div>
           </div>
           
@@ -215,6 +304,19 @@ export default function App() {
           <ChatInput onSend={handleSend} isLoading={isLoading} />
         </div>
       </main>
+
+      {/* Modals */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <HistoryModal 
+        isOpen={isHistoryOpen} 
+        onClose={() => setIsHistoryOpen(false)} 
+        onSelectChat={(id) => console.log('Selected chat:', id)} 
+      />
+      <PaymentModal 
+        isOpen={isPaymentOpen} 
+        onClose={() => setIsPaymentOpen(false)} 
+        user={user}
+      />
     </div>
   );
 }
