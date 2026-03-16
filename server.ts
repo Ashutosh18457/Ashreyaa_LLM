@@ -40,21 +40,30 @@ function getGenAI() {
 async function startServer() {
   // Initialize Firebase Admin
   if (!admin.apps.length) {
-    admin.initializeApp(
-      firebaseConfig.projectId ? { projectId: firebaseConfig.projectId } : undefined
-    );
+    try {
+      admin.initializeApp(
+        firebaseConfig.projectId ? { projectId: firebaseConfig.projectId } : undefined
+      );
+    } catch (error) {
+      console.warn("Firebase Admin initialization failed. Firestore backend features will not work.", error);
+    }
   }
 
-  const db = admin.firestore();
-  if (firebaseConfig.firestoreDatabaseId) {
-    // @ts-ignore
-    db.settings({ databaseId: firebaseConfig.firestoreDatabaseId });
+  let db: admin.firestore.Firestore | null = null;
+  try {
+    db = admin.firestore();
+    if (firebaseConfig.firestoreDatabaseId) {
+      // @ts-ignore
+      db.settings({ databaseId: firebaseConfig.firestoreDatabaseId });
+    }
+  } catch (error) {
+    console.warn("Firestore initialization failed.", error);
   }
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_to_prevent_crash");
 
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Stripe Webhook needs raw body
   app.post("/api/webhooks/stripe", bodyParser.raw({ type: "application/json" }), async (req, res) => {
@@ -76,7 +85,7 @@ async function startServer() {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.client_reference_id;
       
-      if (userId) {
+      if (userId && db) {
         await db.collection("users").doc(userId).update({
           plan: "premium",
           stripeCustomerId: session.customer as string,
@@ -135,15 +144,21 @@ async function startServer() {
 
     try {
       // 1. Check User Plan
-      const userDoc = await db.collection("users").doc(userId).get();
-      const userData = userDoc.data();
-      const plan = userData?.plan || "free";
+      let plan = "free";
+      let usageCount = 0;
+      let usageRef: any = null;
 
-      // 2. Check Usage Limits
-      const today = new Date().toISOString().split("T")[0];
-      const usageRef = db.collection("users").doc(userId).collection("usage").doc(today);
-      const usageDoc = await usageRef.get();
-      const usageCount = usageDoc.exists ? usageDoc.data()?.count || 0 : 0;
+      if (db) {
+        const userDoc = await db.collection("users").doc(userId).get();
+        const userData = userDoc.data();
+        plan = userData?.plan || "free";
+
+        // 2. Check Usage Limits
+        const today = new Date().toISOString().split("T")[0];
+        usageRef = db.collection("users").doc(userId).collection("usage").doc(today);
+        const usageDoc = await usageRef.get();
+        usageCount = usageDoc.exists ? usageDoc.data()?.count || 0 : 0;
+      }
 
       const LIMIT = plan === "premium" ? 1000 : 10; // Free limit: 10 per day
 
@@ -159,10 +174,12 @@ async function startServer() {
       const modelName = plan === "premium" ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
 
       // 4. Update Usage (Atomic)
-      await usageRef.set({
-        count: admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      if (usageRef) {
+        await usageRef.set({
+          count: admin.firestore.FieldValue.increment(1),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
 
       // 5. Generate Content
       const result = await getGenAI().models.generateContent({
