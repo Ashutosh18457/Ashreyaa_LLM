@@ -1,0 +1,8 @@
+{
+  "name": "Ashreya AI",
+  "description": "A high-performance intelligent assistant specialized in training, optimizing, and deploying machine learning models.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

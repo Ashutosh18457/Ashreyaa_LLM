@@ -1,0 +1,44 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+}
+
+@layer base {
+  body {
+    @apply bg-zinc-50 text-zinc-900 font-sans antialiased;
+  }
+}
+
+.markdown-body {
+  @apply text-zinc-800 leading-relaxed;
+}
+
+.markdown-body h1 { @apply text-2xl font-bold mt-6 mb-4; }
+.markdown-body h2 { @apply text-xl font-bold mt-5 mb-3; }
+.markdown-body h3 { @apply text-lg font-bold mt-4 mb-2; }
+.markdown-body p { @apply mb-4; }
+.markdown-body ul { @apply list-disc pl-6 mb-4; }
+.markdown-body ol { @apply list-decimal pl-6 mb-4; }
+.markdown-body li { @apply mb-1; }
+.markdown-body code { @apply bg-zinc-100 px-1.5 py-0.5 rounded text-sm font-mono text-teal-700; }
+.markdown-body pre { @apply bg-zinc-900 rounded-lg p-4 mb-4 overflow-x-auto; }
+.markdown-body pre code { @apply bg-transparent p-0 text-zinc-100; }
+.markdown-body blockquote { @apply border-l-4 border-zinc-200 pl-4 italic text-zinc-600 mb-4; }
+.markdown-body table { @apply w-full border-collapse mb-4; }
+.markdown-body th, .markdown-body td { @apply border border-zinc-200 p-2 text-left; }
+.markdown-body th { @apply bg-zinc-50; }
+
