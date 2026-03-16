@@ -74,11 +74,6 @@ export default function App() {
   }, [messages]);
 
   const handleSend = async (content: string, attachments: Attachment[]) => {
-    if (!user) {
-      alert("Please sign in to chat.");
-      return;
-    }
-
     const userMessage: Message = {
       id: Math.random().toString(36).substring(7),
       role: 'user',
@@ -102,7 +97,7 @@ export default function App() {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      const responseText = await geminiService.chat(newMessages, user.uid, activeCategory);
+      const responseText = await geminiService.chat(newMessages, user?.uid || null, activeCategory);
       
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessageId 

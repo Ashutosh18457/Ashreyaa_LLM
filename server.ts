@@ -6,7 +6,6 @@ import dotenv from "dotenv";
 import admin from "firebase-admin";
 import { readFileSync } from "fs";
 import Stripe from "stripe";
-import { GoogleGenAI } from "@google/genai";
 import bodyParser from "body-parser";
 
 dotenv.config();
@@ -22,19 +21,6 @@ try {
     projectId: process.env.VITE_FIREBASE_PROJECT_ID,
     firestoreDatabaseId: process.env.VITE_FIRESTORE_DATABASE_ID
   };
-}
-
-let genAI: GoogleGenAI | null = null;
-
-function getGenAI() {
-  if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not set in environment variables.");
-    }
-    genAI = new GoogleGenAI({ apiKey });
-  }
-  return genAI;
 }
 
 async function startServer() {
@@ -132,68 +118,6 @@ async function startServer() {
 
       res.json({ url: session.url });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Secure AI Proxy
-  app.post("/api/ai/chat", async (req, res) => {
-    const { userId, messages, category } = req.body;
-
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    try {
-      // 1. Check User Plan
-      let plan = "free";
-      let usageCount = 0;
-      let usageRef: any = null;
-
-      if (db) {
-        const userDoc = await db.collection("users").doc(userId).get();
-        const userData = userDoc.data();
-        plan = userData?.plan || "free";
-
-        // 2. Check Usage Limits
-        const today = new Date().toISOString().split("T")[0];
-        usageRef = db.collection("users").doc(userId).collection("usage").doc(today);
-        const usageDoc = await usageRef.get();
-        usageCount = usageDoc.exists ? usageDoc.data()?.count || 0 : 0;
-      }
-
-      const LIMIT = plan === "premium" ? 1000 : 10; // Free limit: 10 per day
-
-      if (usageCount >= LIMIT) {
-        return res.status(429).json({ 
-          error: "Daily limit reached", 
-          plan,
-          limit: LIMIT 
-        });
-      }
-
-      // 3. Select Model based on plan
-      const modelName = plan === "premium" ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
-
-      // 4. Update Usage (Atomic)
-      if (usageRef) {
-        await usageRef.set({
-          count: admin.firestore.FieldValue.increment(1),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }
-
-      // 5. Generate Content
-      const result = await getGenAI().models.generateContent({
-        model: modelName,
-        contents: messages.map((m: any) => ({
-          role: m.role === "user" ? "user" : "model",
-          parts: [{ text: m.content }]
-        }))
-      });
-
-      res.json({ text: result.text });
-
-    } catch (error: any) {
-      console.error("AI Proxy Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
