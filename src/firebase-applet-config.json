@@ -1,39 +1,5 @@
-{
-  "entities": {
-    "User": {
-      "title": "User",
-      "description": "User profile and subscription data",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string" },
-        "displayName": { "type": "string" },
-        "plan": { "type": "string", "enum": ["free", "premium"] },
-        "stripeCustomerId": { "type": "string" },
-        "subscriptionId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["uid", "email", "plan"]
-    },
-    "Usage": {
-      "title": "Usage",
-      "description": "Daily API usage tracking",
-      "type": "object",
-      "properties": {
-        "count": { "type": "integer" },
-        "lastReset": { "type": "string", "format": "date-time" }
-      },
-      "required": ["count"]
-    }
-  },
-  "firestore": {
-    "/users/{userId}": {
-      "schema": "User",
-      "description": "User profiles and subscription status"
-    },
-    "/users/{userId}/usage/{date}": {
-      "schema": "Usage",
-      "description": "Daily usage limits tracking"
-    }
-  }
-}
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  // ... baaki fields
+};
