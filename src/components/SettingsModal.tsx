@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, Shield, Bell, Moon, Cpu, Globe, User, Lock, Database, CreditCard, CheckCircle2 } from 'lucide-react';
+import { X, Shield, Bell, Moon, Cpu, Globe, User, Lock, Database, CreditCard, CheckCircle2, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,8 +15,18 @@ type SettingsTab = 'profile' | 'account' | 'security' | 'appearance' | 'data';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, theme, setTheme }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const user = auth.currentUser;
   
   if (!isOpen) return null;
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      onClose();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: <User size={16} /> },
@@ -93,34 +105,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                     <div className="flex items-center gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
                       <div className="relative">
                         <div className="w-24 h-24 rounded-full bg-zinc-800 border-4 border-black overflow-hidden shadow-2xl">
-                          <img src="https://picsum.photos/seed/ashreya/200/200" alt="Profile" className="w-full h-full object-cover" />
+                          <img src={user?.photoURL || "https://picsum.photos/seed/ashreya/200/200"} alt="Profile" className="w-full h-full object-cover" />
                         </div>
                         <div className="absolute bottom-0 right-0 w-8 h-8 bg-teal-500 rounded-full border-4 border-zinc-900 flex items-center justify-center text-black">
                           <CheckCircle2 size={14} strokeWidth={3} />
                         </div>
                       </div>
-                      <div>
-                        <h3 className="text-2xl font-black text-white tracking-tight">Ashutosh Bhule</h3>
-                        <p className="text-zinc-400 font-medium">ashutoshbhule1209@gmail.com</p>
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-black text-white tracking-tight">{user?.displayName || 'Guest User'}</h3>
+                        <p className="text-zinc-400 font-medium">{user?.email || 'Not signed in'}</p>
                         <div className="flex items-center gap-2 mt-3">
                           <span className="px-2 py-0.5 bg-teal-500/10 text-teal-500 text-[10px] font-black uppercase tracking-widest rounded border border-teal-500/20">
-                            Enterprise Subscriber
-                          </span>
-                          <span className="px-2 py-0.5 bg-zinc-800 text-zinc-500 text-[10px] font-black uppercase tracking-widest rounded">
-                            Verified Node
+                            {user ? 'Verified Node' : 'Guest Access'}
                           </span>
                         </div>
                       </div>
+                      {user && (
+                        <button 
+                          onClick={handleSignOut}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl border border-red-500/20 transition-all text-xs font-bold"
+                        >
+                          <LogOut size={14} />
+                          Sign Out
+                        </button>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Display Name</label>
-                        <input type="text" defaultValue="Ashutosh Bhule" className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500/50 transition-all" />
+                        <input type="text" defaultValue={user?.displayName || ""} className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500/50 transition-all" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
-                        <input type="email" defaultValue="ashutoshbhule1209@gmail.com" className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500/50 transition-all" />
+                        <input type="email" defaultValue={user?.email || ""} className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500/50 transition-all" />
                       </div>
                     </div>
 
@@ -260,6 +278,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                         </div>
                         <span className="text-[10px] font-black text-teal-500 uppercase tracking-widest">Default</span>
                       </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === 'data' && (
+                  <motion.div
+                    key="data"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="space-y-6"
+                  >
+                    <div className="p-6 bg-zinc-800/50 rounded-3xl border border-white/5">
+                      <h3 className="text-sm font-bold text-white mb-4">Data Usage & Storage</h3>
+                      <p className="text-xs text-zinc-400 leading-relaxed mb-6">
+                        Manage how your data is used to improve Ashreya's neural models. You can export or delete your data at any time.
+                      </p>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5">
+                          <div>
+                            <p className="text-sm font-bold text-zinc-200">Training Data</p>
+                            <p className="text-[10px] text-zinc-500">Allow your chats to be used for model optimization</p>
+                          </div>
+                          <div className="w-10 h-5 bg-teal-500 rounded-full relative cursor-pointer">
+                            <div className="absolute right-1 top-1 w-3 h-3 bg-black rounded-full shadow-sm" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5">
+                          <div>
+                            <p className="text-sm font-bold text-zinc-200">Search History</p>
+                            <p className="text-[10px] text-zinc-500">Personalize results based on your research history</p>
+                          </div>
+                          <div className="w-10 h-5 bg-zinc-700 rounded-full relative cursor-pointer">
+                            <div className="absolute left-1 top-1 w-3 h-3 bg-black rounded-full shadow-sm" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button className="p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all text-left group">
+                        <p className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors">Export Data</p>
+                        <p className="text-[10px] text-zinc-500">Download a copy of your neural history</p>
+                      </button>
+                      <button className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-2xl transition-all text-left group">
+                        <p className="text-sm font-bold text-red-400">Delete Account</p>
+                        <p className="text-[10px] text-zinc-500">Permanently remove all data and nodes</p>
+                      </button>
                     </div>
                   </motion.div>
                 )}

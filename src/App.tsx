@@ -119,7 +119,12 @@ export default function App() {
       ));
     } catch (error: any) {
       console.error('Chat error:', error);
-      const errorMessage = error?.message || 'I encountered an error. Please try again.';
+      let errorMessage = error?.message || 'I encountered an error. Please try again.';
+      
+      if (errorMessage.includes('API key was reported as leaked')) {
+        errorMessage = 'Bhai, your Gemini API key has been reported as leaked. Please go to the AI Studio settings, rotate your API key, and update it in the platform settings to continue.';
+      }
+      
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessageId 
           ? { ...msg, content: errorMessage } 
@@ -233,21 +238,34 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-900/50 rounded-full border border-white/5">
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="w-7 h-7 rounded-full border-2 border-black bg-zinc-800 overflow-hidden shadow-xl">
-                    <img src={`https://picsum.photos/seed/user${i}/64/64`} alt="user" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  </div>
-                ))}
+            {!user ? (
+              <button 
+                onClick={signInWithGoogle}
+                className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-teal-500/20 active:scale-95"
+              >
+                <LogIn size={16} />
+                <span>Sign In</span>
+              </button>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-900/50 rounded-full border border-white/5">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="w-7 h-7 rounded-full border-2 border-black bg-zinc-800 overflow-hidden shadow-xl">
+                      <img src={user.photoURL || `https://picsum.photos/seed/user${i}/64/64`} alt="user" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col ml-1">
+                  <span className="text-[10px] text-white font-bold leading-none">{user.displayName?.split(' ')[0] || 'User'}</span>
+                  <span className="text-[8px] text-teal-500 font-bold uppercase tracking-tighter">{userPlan.toUpperCase()} Node</span>
+                </div>
               </div>
-              <div className="flex flex-col ml-1">
-                <span className="text-[10px] text-white font-bold leading-none">3 Active Nodes</span>
-                <span className="text-[8px] text-teal-500 font-bold uppercase tracking-tighter">Synchronized</span>
-              </div>
-            </div>
+            )}
             
-            <button className="p-2.5 hover:bg-white/5 rounded-xl transition-colors text-zinc-400 hover:text-white border border-transparent hover:border-white/10">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2.5 hover:bg-white/5 rounded-xl transition-colors text-zinc-400 hover:text-white border border-transparent hover:border-white/10"
+            >
               <Bot size={20} />
             </button>
           </div>
