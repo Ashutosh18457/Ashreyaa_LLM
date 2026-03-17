@@ -24,7 +24,20 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'Dark' | 'Light' | 'System'>(() => {
+    return (localStorage.getItem('ashreya_theme') as any) || 'Dark';
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (theme === 'Light' || (theme === 'System' && !window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('theme-light');
+    } else {
+      document.documentElement.classList.remove('theme-light');
+    }
+    localStorage.setItem('ashreya_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -128,11 +141,28 @@ export default function App() {
     <div className="flex h-screen bg-black text-zinc-100 selection:bg-teal-500/30">
       <Sidebar 
         activeCategory={activeCategory} 
-        onCategoryChange={setActiveCategory}
-        onNewChat={handleNewChat}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenPayment={() => setIsPaymentOpen(true)}
+        onCategoryChange={(cat) => {
+          setActiveCategory(cat);
+          setIsSidebarOpen(false);
+        }}
+        onNewChat={() => {
+          handleNewChat();
+          setIsSidebarOpen(false);
+        }}
+        onOpenSettings={() => {
+          setIsSettingsOpen(true);
+          setIsSidebarOpen(false);
+        }}
+        onOpenHistory={() => {
+          setIsHistoryOpen(true);
+          setIsSidebarOpen(false);
+        }}
+        onOpenPayment={() => {
+          setIsPaymentOpen(true);
+          setIsSidebarOpen(false);
+        }}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
       
       <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
@@ -180,9 +210,15 @@ export default function App() {
         )}
 
         {/* Header */}
-        <header className="h-20 border-b border-white/5 bg-black/40 backdrop-blur-2xl flex items-center justify-between px-8 sticky top-0 z-20">
+        <header className="h-20 border-b border-white/5 bg-black/40 backdrop-blur-2xl flex items-center justify-between px-4 sm:px-8 sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-teal-500/10 text-teal-400 rounded-xl border border-teal-500/20 shadow-lg shadow-teal-500/5">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="md:hidden p-2.5 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl border border-white/5 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            </button>
+            <div className="hidden sm:block p-2.5 bg-teal-500/10 text-teal-400 rounded-xl border border-teal-500/20 shadow-lg shadow-teal-500/5">
               <Sparkles size={22} />
             </div>
             <div>
@@ -301,7 +337,12 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        theme={theme}
+        setTheme={setTheme}
+      />
       <HistoryModal 
         isOpen={isHistoryOpen} 
         onClose={() => setIsHistoryOpen(false)} 

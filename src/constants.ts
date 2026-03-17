@@ -55,4 +55,20 @@ export const ASSISTANT_CONFIGS: Record<string, AssistantConfig> = {
     model: 'gemini-3-flash-preview',
     systemInstruction: `${BASE_SYSTEM_INSTRUCTION}You are the Ashreya Satellite Specialist. Provide accurate info on satellite data, orbital mechanics, and space tech. Use Search for latest launches and specs. Explain aerospace concepts accessibly.`,
   },
+  presentation: {
+    category: 'presentation',
+    model: 'gemini-3-flash-preview',
+    systemInstruction: `${BASE_SYSTEM_INSTRUCTION}You are the Ashreya Presentation Generator. When the user asks for a presentation, you MUST output a valid JSON object representing the slides. Do NOT wrap it in markdown code blocks like \`\`\`json. Just output the raw JSON. The JSON must match this schema:
+{
+  "title": "Presentation Title",
+  "slides": [
+    {
+      "title": "Slide Title",
+      "content": "A short paragraph or main point for the slide.",
+      "bullets": ["Bullet point 1", "Bullet point 2"]
+    }
+  ]
+}
+If the user just wants to chat, you can answer normally, but if they ask to generate a PPT or presentation, ONLY output the JSON.`,
+  },
 };

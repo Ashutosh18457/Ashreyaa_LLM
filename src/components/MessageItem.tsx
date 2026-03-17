@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Message } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { User, Bot, ExternalLink, Sparkles, Paperclip } from 'lucide-react';
+import { User, Bot, ExternalLink, Sparkles, Paperclip, Presentation, Download } from 'lucide-react';
 import { cn } from '../utils';
 import { format } from 'date-fns';
+import pptxgen from 'pptxgenjs';
 
 interface MessageItemProps {
   message: Message;
@@ -11,6 +12,76 @@ interface MessageItemProps {
 
 export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   const isAssistant = message.role === 'assistant';
+  const [isGeneratingPPT, setIsGeneratingPPT] = useState(false);
+
+  // Check if content is presentation JSON
+  let presentationData = null;
+  let isPresentation = false;
+  
+  if (isAssistant) {
+    try {
+      let contentToParse = message.content.trim();
+      // Remove markdown code block if present
+      if (contentToParse.startsWith('```json')) {
+        contentToParse = contentToParse.replace(/^```json\n/, '').replace(/\n```$/, '');
+      } else if (contentToParse.startsWith('```')) {
+        contentToParse = contentToParse.replace(/^```\n/, '').replace(/\n```$/, '');
+      }
+      
+      const parsed = JSON.parse(contentToParse);
+      if (parsed.title && Array.isArray(parsed.slides)) {
+        presentationData = parsed;
+        isPresentation = true;
+      }
+    } catch (e) {
+      // Not JSON, ignore
+    }
+  }
+
+  const handleDownloadPPT = async () => {
+    if (!presentationData) return;
+    setIsGeneratingPPT(true);
+    try {
+      const pres = new pptxgen();
+      
+      // Title Slide
+      const titleSlide = pres.addSlide();
+      titleSlide.addText(presentationData.title, {
+        x: 1, y: 2, w: '80%', h: 1.5,
+        fontSize: 44, bold: true, color: '363636', align: 'center'
+      });
+
+      // Content Slides
+      presentationData.slides.forEach((slide: any) => {
+        const s = pres.addSlide();
+        s.addText(slide.title, {
+          x: 0.5, y: 0.5, w: '90%', h: 1,
+          fontSize: 32, bold: true, color: '363636'
+        });
+        
+        if (slide.content) {
+          s.addText(slide.content, {
+            x: 0.5, y: 1.5, w: '90%', h: 1,
+            fontSize: 18, color: '666666'
+          });
+        }
+        
+        if (slide.bullets && Array.isArray(slide.bullets)) {
+          const bulletText = slide.bullets.map((b: string) => ({ text: b, options: { bullet: true } }));
+          s.addText(bulletText, {
+            x: 0.5, y: slide.content ? 2.5 : 1.5, w: '90%', h: 3,
+            fontSize: 20, color: '363636', bullet: true
+          });
+        }
+      });
+
+      await pres.writeFile({ fileName: `${presentationData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx` });
+    } catch (error) {
+      console.error('Error generating PPT:', error);
+    } finally {
+      setIsGeneratingPPT(false);
+    }
+  };
 
   return (
     <div className={cn(
@@ -71,9 +142,53 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           </div>
         )}
 
-        <div className="prose prose-invert max-w-none">
-          <MarkdownRenderer content={message.content} />
-        </div>
+        {isPresentation && presentationData ? (
+          <div className="bg-zinc-900/50 border border-teal-500/20 rounded-2xl p-6 mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-teal-500/10 text-teal-400 rounded-xl">
+                  <Presentation size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">{presentationData.title}</h3>
+                  <p className="text-xs text-zinc-400 font-medium">{presentationData.slides.length} Slides</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownloadPPT}
+                disabled={isGeneratingPPT}
+                className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-black font-bold text-sm rounded-xl hover:bg-teal-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingPPT ? (
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Download size={16} />
+                )}
+                {isGeneratingPPT ? 'Generating...' : 'Download PPT'}
+              </button>
+            </div>
+            
+            <div className="grid gap-3 mt-6">
+              {presentationData.slides.map((slide: any, idx: number) => (
+                <div key={idx} className="p-4 bg-black/40 border border-white/5 rounded-xl">
+                  <h4 className="text-sm font-bold text-teal-400 mb-2">Slide {idx + 1}: {slide.title}</h4>
+                  {slide.content && <p className="text-xs text-zinc-300 mb-2">{slide.content}</p>}
+                  {slide.bullets && slide.bullets.length > 0 && (
+                    <ul className="list-disc list-inside text-xs text-zinc-400 space-y-1">
+                      {slide.bullets.map((b: string, i: number) => (
+                        <li key={i}>{b}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-invert max-w-none">
+            <MarkdownRenderer content={message.content} />
+          </div>
+        )}
 
         {message.groundingMetadata?.groundingChunks && message.groundingMetadata.groundingChunks.length > 0 && (
           <div className="mt-6 pt-6 border-t border-white/5">

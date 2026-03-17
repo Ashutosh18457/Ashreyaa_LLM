@@ -73,3 +73,13 @@
   animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.theme-light {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.theme-light img, 
+.theme-light video, 
+.theme-light .no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
+

@@ -11,7 +11,8 @@ import {
   MessageSquare,
   Cpu,
   Globe,
-  CreditCard
+  CreditCard,
+  Presentation
 } from 'lucide-react';
 import { AssistantCategory } from '../types';
 import { cn } from '../utils';
@@ -23,6 +24,8 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
   onOpenPayment: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -31,7 +34,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewChat,
   onOpenSettings,
   onOpenHistory,
-  onOpenPayment
+  onOpenPayment,
+  isOpen,
+  onClose
 }) => {
   const categories: { id: AssistantCategory; label: string; icon: React.ReactNode; description: string }[] = [
     { id: 'general', label: 'General', icon: <LayoutDashboard size={18} />, description: 'Versatile AI assistant' },
@@ -39,19 +44,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'coding', label: 'Coding', icon: <Code size={18} />, description: 'Technical & programming' },
     { id: 'research', label: 'Research', icon: <Search size={18} />, description: 'Deep analysis & search' },
     { id: 'satellite', label: 'Satellite', icon: <Globe size={18} />, description: 'Orbital intelligence' },
+    { id: 'presentation', label: 'PPT Generator', icon: <Presentation size={18} />, description: 'Create presentations' },
   ];
 
   return (
-    <div className="w-64 bg-[#0c0c0e] text-zinc-400 flex flex-col h-full border-r border-white/5">
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-9 h-9 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-teal-500/20">
-          A
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      <div className={cn(
+        "fixed md:static inset-y-0 left-0 z-50 w-64 bg-[#0c0c0e] text-zinc-400 flex flex-col h-full border-r border-white/5 transition-transform duration-300 ease-in-out",
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-teal-500/20">
+              A
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white font-bold tracking-tight leading-none">Ashreya AI</span>
+              <span className="text-[10px] text-teal-500/80 font-semibold tracking-wider uppercase mt-1">Enterprise</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="md:hidden p-2 text-zinc-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
-        <div className="flex flex-col">
-          <span className="text-white font-bold tracking-tight leading-none">Ashreya AI</span>
-          <span className="text-[10px] text-teal-500/80 font-semibold tracking-wider uppercase mt-1">Enterprise</span>
-        </div>
-      </div>
 
       <div className="px-4 mb-6">
         <button
@@ -114,5 +137,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </div>
+    </>
   );
 };

@@ -35,7 +35,7 @@ export interface GroundingMetadata {
   }[];
 }
 
-export type AssistantCategory = 'general' | 'research' | 'coding' | 'business' | 'problem-solving' | 'automation' | 'satellite' | 'ml-engineer';
+export type AssistantCategory = 'general' | 'research' | 'coding' | 'business' | 'problem-solving' | 'automation' | 'satellite' | 'ml-engineer' | 'presentation';
 
 export interface AssistantConfig {
   category: AssistantCategory;

@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'motion/react';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  theme: 'Dark' | 'Light' | 'System';
+  setTheme: (theme: 'Dark' | 'Light' | 'System') => void;
 }
 
 type SettingsTab = 'profile' | 'account' | 'security' | 'appearance' | 'data';
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, theme, setTheme }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   
   if (!isOpen) return null;
@@ -140,10 +142,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <div>
                       <h3 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em] mb-4">Theme Engine</h3>
                       <div className="grid grid-cols-3 gap-4">
-                        {['Dark', 'Light', 'System'].map(theme => (
-                          <button key={theme} className={`p-4 rounded-2xl border transition-all text-center ${theme === 'Dark' ? 'bg-teal-500/10 border-teal-500/30 text-teal-400' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-zinc-300'}`}>
-                            <div className={`w-full aspect-video rounded-lg mb-3 ${theme === 'Dark' ? 'bg-black' : theme === 'Light' ? 'bg-white' : 'bg-gradient-to-br from-black to-white'}`} />
-                            <span className="text-xs font-bold">{theme}</span>
+                        {(['Dark', 'Light', 'System'] as const).map(t => (
+                          <button 
+                            key={t} 
+                            onClick={() => setTheme(t)}
+                            className={`p-4 rounded-2xl border transition-all text-center ${theme === t ? 'bg-teal-500/10 border-teal-500/30 text-teal-400' : 'bg-white/5 border-white/5 text-zinc-500 hover:text-zinc-300'}`}
+                          >
+                            <div className={`w-full aspect-video rounded-lg mb-3 ${t === 'Dark' ? 'bg-black' : t === 'Light' ? 'bg-white' : 'bg-gradient-to-br from-black to-white'}`} />
+                            <span className="text-xs font-bold">{t}</span>
                           </button>
                         ))}
                       </div>

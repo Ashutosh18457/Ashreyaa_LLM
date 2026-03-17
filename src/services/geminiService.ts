@@ -32,7 +32,8 @@ export class GeminiService {
           const today = new Date().toISOString().split("T")[0];
           usageRef = doc(db, "users", userId, "usage", today);
           const usageDoc = await getDoc(usageRef);
-          usageCount = usageDoc.exists() ? usageDoc.data()?.count || 0 : 0;
+          const data = usageDoc.data() as { count: number } | undefined;
+          usageCount = usageDoc.exists() ? data?.count || 0 : 0;
         } catch (err) {
           console.warn("Firestore usage check failed, proceeding with free tier limits.", err);
         }
